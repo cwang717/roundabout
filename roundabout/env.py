@@ -34,17 +34,39 @@ class Env():
         self.boundary = envParams["boundary"]
         self.idm = IDMController(self.boundary - self.stop_line)
         self.num_step = 0
+        self.queue_length = [0, 0, 0, 0]
         self.k_omega = 10
         self.k_theta = 10
         self.records = {
             "theta": np.zeros((1, self.numSlots)), 
             "omega": np.zeros((1, self.numSlots))
         }
-        self.eta = np.array([[0.0, 0.2, 0.7, 0.1],
-                             [0.2, 0.0, 0.6, 0.2],
-                             [0.8, 0.1, 0.0, 0.1],
-                             [0.1, 0.4, 0.5, 0.0]])
-        self.P = np.array([0.779220779220795, 0.8928571428571691, 0.9459459459459587, 0.8510638297872659])
+        self.eta = envParams["eta"]
+        s1 = np.array([[1, 1, 1, 1],
+               [0, 1, 0, 0],
+               [0, 1, 1, 0],
+               [0, 1, 1, 1]])
+        s2 = np.array([[1, 0, 1, 1],
+                    [1, 1, 1, 1],
+                    [0, 0, 1, 0],
+                    [0, 0, 1, 1]])
+        s3 = np.array([[1, 0, 0, 1],
+                    [1, 1, 0, 1],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 1]])
+        s4 = np.array([[1, 0, 0, 0],
+                    [1, 1, 0, 0],
+                    [1, 1, 1, 0],
+                    [1, 1, 1, 1]])
+        A1 = sum(np.transpose(s1*self.eta))
+        A2 = sum(np.transpose(s2*self.eta))
+        A3 = sum(np.transpose(s3*self.eta))
+        A4 = sum(np.transpose(s4*self.eta))
+        A = np.concatenate((A1, A2, A3, A4)).reshape(4, 4)
+        self.P = np.array([self.Q[0]/(60-A.dot(self.Q)[3] + self.Q.dot(self.eta)[0]),
+                           self.Q[1]/(60-A.dot(self.Q)[0] + self.Q.dot(self.eta)[1]),
+                           self.Q[2]/(60-A.dot(self.Q)[1] + self.Q.dot(self.eta)[2]),
+                           self.Q[3]/(60-A.dot(self.Q)[2] + self.Q.dot(self.eta)[3])])
 
     def initialize(self, initParams):
         # initial slots
@@ -203,6 +225,11 @@ class Env():
                         slot.empty = False
                         slot.veh.append(self.adjusting_vehicles[approach][-1])
 
+        # update queue length
+        for i in range(4):
+            mask = [ veh.v < 3 and veh.d > 75 for veh in self.approaching_vehicles[i]]
+            self.queue_length[i] = sum(mask)
+
     def ani_save(self, fig, steps):
         
         ax = fig.add_subplot(111, autoscale_on=False, xlim=(-self.boundary/2, self.boundary), ylim=(-self.boundary/2, self.boundary))
@@ -336,6 +363,7 @@ class Env():
     def animate(self, step):
         self.step()
         self.time_text.set_text(self.time_template % self.num_step)
+        self.queue_text.set_text(self.queue_template % tuple(self.queue_length))
 
         for slot in self.slots:
             i = self.slots.index(slot)
@@ -405,7 +433,7 @@ class Env():
         return [item for group in [self.slot_marker, self.sub_slot_marker, self.sub_slot_text,
                                    self.rec_handler, self.adjusting_handler, [
                                        self.vehicle_dots, self.vehicle_exit_dots, 
-                                       self.sub_vehicle_dots, self.sub_vehicle_exit_dots
+                                       self.sub_vehicle_dots, self.sub_vehicle_exit_dots, self.queue_text, self.time_text
                                    ]] for item in group]
         # return self.slot_marker_1, self.slot_marker_2, self.slot_marker_3, self.slot_marker_4,\
             #    self.slot_marker_5, self.slot_marker_6, self.slot_marker_7, self.slot_marker_8,\
