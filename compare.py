@@ -13,18 +13,19 @@ envParams = {
     "C": 3,
     "veh_length": 5,
     "headway": 3,
-    "Q": np.array([30, 25, 35, 20])*0.8,
+    "Q": np.array([35, 35, 35, 35]),
     "step_size": 0.05,
     "boundary": 250,
-    "eta": np.array([[0.0, 0.2, 0.7, 0.1],
-                     [0.2, 0.0, 0.6, 0.2],
-                     [0.8, 0.1, 0.0, 0.1],
-                     [0.1, 0.4, 0.5, 0.0]]),
+    "eta": np.array([[0.0, 0.0, 5/7, 2/7],
+                     [2/7, 0.0, 0.0, 5/7],
+                     [5/7, 2/7, 0.0, 0.0],
+                     [0.0, 5/7, 2/7, 0.0]]),
     "fifo": True
 }
+
 initParams = {
-    #"l_0": np.array([10, 0, 0, 0]),  
-    "l_0": np.array([14, 15, 13, 14]),  
+    "l_0": np.array([0, 0, 0, 0]),  
+    #"l_0": np.array([14, 15, 13, 14]),  
 }
 
 env = Env(envParams)
@@ -32,4 +33,5 @@ env.initialize(initParams)
 
 
 
-test_ani(env, 6000, "main")
+test_ani(env, 8400, "compare")
+env.save_records("compare_records")

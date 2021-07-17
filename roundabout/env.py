@@ -6,6 +6,7 @@ from functools import reduce
 from operator import add
 import matplotlib.animation as animation
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import pickle
 
 
 class Env():
@@ -67,6 +68,11 @@ class Env():
                            self.Q[1]/(60-A.dot(self.Q)[0] + self.Q.dot(self.eta)[1]),
                            self.Q[2]/(60-A.dot(self.Q)[1] + self.Q.dot(self.eta)[2]),
                            self.Q[3]/(60-A.dot(self.Q)[2] + self.Q.dot(self.eta)[3])])
+        self.fifo = envParams["fifo"]
+        if self.fifo:
+            self.P = np.ones(4)
+        
+        self.throughput = 0
 
     def initialize(self, initParams):
         # initial slots
@@ -193,6 +199,7 @@ class Env():
                     veh.d = -1
                 if len(veh.approach_seq) == 0:
                     self.leaving_vehicles[veh.slot.next_approach].append(veh)
+                    self.throughput += 1
                     self.platooning_vehicles[i].remove(veh)
                     self.virtual_vehicles.remove(veh.slot.virtual_vehicle)
                     veh.slot.virtual_vehicle = None
@@ -230,7 +237,9 @@ class Env():
             mask = [ veh.v < 3 and veh.d > 75 for veh in self.approaching_vehicles[i]]
             self.queue_length[i] = sum(mask)
 
-    def ani_save(self, fig, steps):
+        
+
+    def ani_save(self, fig, steps, f_name):
         
         ax = fig.add_subplot(111, autoscale_on=False, xlim=(-self.boundary/2, self.boundary), ylim=(-self.boundary/2, self.boundary))
 
@@ -238,7 +247,7 @@ class Env():
 
         ani = animation.FuncAnimation(fig, self.animate, steps, blit=True)
 
-        ani.save('simulation-%d.mp4' % steps, fps=int(1/self.step_size))
+        ani.save(f_name + '-' + str(self.fifo) + '-' + 'simulation-%d.mp4' % steps, fps=int(1/self.step_size))
 
     def animate_init(self, ax):
         # plot the roadways in black
@@ -313,12 +322,12 @@ class Env():
         self.sub_vehicle_exit_dots = sub_ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1), marker='o')
 
         # information texts handlers
-        self.time_template = 'steps = %d'
+        self.time_template = 'step = %d\nstep_size = %.3f\ntime = %.1fs'
         self.time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
         self.queue_template = 'queue 0: %d\nqueue 1: %d\nqueue 2: %d\nqueue 3: %s'
         self.queue_text = ax.text(0.05, 0.8, '', transform=ax.transAxes)
-        self.slots_template = 'slot exit: %d %d %d %d %d %d %d %d %d %d %d %d\n next approach: %d %d %d %d %d %d %d %d %d %d %d %d'
-        self.slots_text = ax.text(0.05, 0.7, '', transform=ax.transAxes)
+        self.throughput_template = 'roundabout throughput: %d\n\n\n'
+        self.throughput_text = ax.text(0.05, 0.7, '', transform=ax.transAxes)
 
         # self.time_text.set_text(self.time_template % (0))
         # self.slot_marker_1, self.slot_marker_2, self.slot_marker_3, self.slot_marker_4,\
@@ -362,8 +371,9 @@ class Env():
 
     def animate(self, step):
         self.step()
-        self.time_text.set_text(self.time_template % self.num_step)
+        self.time_text.set_text(self.time_template % (self.num_step, self.step_size, self.num_step*self.step_size))
         self.queue_text.set_text(self.queue_template % tuple(self.queue_length))
+        self.throughput_text.set_text(self.throughput_template % self.throughput)
 
         for slot in self.slots:
             i = self.slots.index(slot)
@@ -433,7 +443,8 @@ class Env():
         return [item for group in [self.slot_marker, self.sub_slot_marker, self.sub_slot_text,
                                    self.rec_handler, self.adjusting_handler, [
                                        self.vehicle_dots, self.vehicle_exit_dots, 
-                                       self.sub_vehicle_dots, self.sub_vehicle_exit_dots, self.queue_text, self.time_text
+                                       self.sub_vehicle_dots, self.sub_vehicle_exit_dots, 
+                                       self.queue_text, self.time_text, self.throughput_text
                                    ]] for item in group]
         # return self.slot_marker_1, self.slot_marker_2, self.slot_marker_3, self.slot_marker_4,\
             #    self.slot_marker_5, self.slot_marker_6, self.slot_marker_7, self.slot_marker_8,\
@@ -503,3 +514,7 @@ class Env():
             vehicle_exit_x = np.ones(100)*(self.boundary + 1)
             vehicle_exit_y = np.ones(100)*(self.boundary + 1)
         vehicle_exit_dots.set_offsets(np.array([[item[0], item[1]] for item in zip(vehicle_exit_x, vehicle_exit_y)]))
+
+    def save_records(self, f_name):
+        with open(f_name+"-"+str(self.fifo), 'wb') as f:
+            pickle.dump(self.records, f)

@@ -29,10 +29,10 @@ def test_plot(env):
 
     plt.savefig("test.png")
 
-def test_ani(env, steps):
+def test_ani(env, steps, f_name):
     fig =plt.figure(figsize=(15, 15))
 
-    env.ani_save(fig, steps)
+    env.ani_save(fig, steps, f_name)
 
 def next_a(approach):
     return np.mod(approach + 1, 4)
