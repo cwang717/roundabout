@@ -266,6 +266,8 @@ class Env():
         ax.plot(-(1+np.sin(np.linspace(7/6*np.pi, 3/2*np.pi, 100)))*self.R, (np.sqrt(3)+np.cos(np.linspace(7/6*np.pi, 3/2*np.pi, 100)))*self.R, markersize=0, c='k')
         ax.plot(-(1+np.sin(np.linspace(7/6*np.pi, 3/2*np.pi, 100)))*self.R, -(np.sqrt(3)+np.cos(np.linspace(7/6*np.pi, 3/2*np.pi, 100)))*self.R, markersize=0, c='k')
 
+        ax.set_xlabel("x (m)")
+        ax.set_ylabel("y (m)")
         # # plot stoplines in red
         # ax.plot([-self.stop_line, -self.stop_line], [0, -2], markersize=0, c='r')
         # ax.plot([self.stop_line, self.stop_line], [0, 2], markersize=0, c='r')
@@ -311,22 +313,26 @@ class Env():
             temp, = sub_ax.plot(np.array([self.R-1, self.R+1])*np.cos(slot.theta), 
                             np.array([self.R-1, self.R+1])*np.sin(slot.theta), markersize=0, c='g')
             self.sub_slot_marker.append(temp)
-            temp = sub_ax.text((self.R+2)*np.cos(slot.theta), 
-                           (self.R+2)*np.sin(slot.theta), "%d" % slot.id, ha='center', va='center')
+            temp = sub_ax.text((self.R+4)*np.cos(slot.theta), 
+                           (self.R+4)*np.sin(slot.theta), "%d" % slot.id, ha='center', va='center')
             self.sub_slot_text.append(temp)
 
         self.vehicle_dots = ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1))
         self.vehicle_exit_dots = ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1), marker='o')
 
-        self.sub_vehicle_dots = sub_ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1))
-        self.sub_vehicle_exit_dots = sub_ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1), marker='o')
+        self.sub_vehicle_dots = sub_ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1), s=100)
+        self.sub_vehicle_exit_dots = sub_ax.scatter(np.ones(100)*(self.boundary + 1), np.ones(100)*(self.boundary + 1), s=100, marker='o')
+
+        self.sub_vehicle_dots.set_label("incoming and platooning vehicles")
+        self.sub_vehicle_exit_dots.set_label("exiting vehicles")
+        sub_ax.legend(loc="upper right")
 
         # information texts handlers
         self.time_template = 'step = %d\nstep_size = %.3f\ntime = %.1fs'
         self.time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
         self.queue_template = 'queue 0: %d\nqueue 1: %d\nqueue 2: %d\nqueue 3: %s'
         self.queue_text = ax.text(0.05, 0.8, '', transform=ax.transAxes)
-        self.throughput_template = 'roundabout throughput: %d\n\n\n'
+        self.throughput_template = 'throughput: %d\n\n\n'
         self.throughput_text = ax.text(0.05, 0.7, '', transform=ax.transAxes)
 
         # self.time_text.set_text(self.time_template % (0))
@@ -347,12 +353,12 @@ class Env():
                     width=6,                     # inch
                     height=1,                    # inch
                     bbox_transform=ax.transData, # data coordinates
-                    bbox_to_anchor=(50,-110),    # data coordinates
+                    bbox_to_anchor=(50,-105),    # data coordinates
                     loc=3)                       # loc=lower left corner
         self.rec_steps = int(self.numSlots*self.slot_length/self.v/self.step_size)
         rec_ax.set_xlim(1-self.rec_steps, 0)
         rec_ax.set_ylim(-0.5, 0.5)
-        rec_ax.set_ylabel("Headway variance (m)")
+        rec_ax.set_ylabel("Headway\nerrors (m)")
         rec_ax.set_xlabel("Steps (0 is current step)")
         rec_steps = min(self.rec_steps, self.num_step)
         self.rec_handler = rec_ax.plot([1, 2], np.zeros((2, 12)))
@@ -365,7 +371,7 @@ class Env():
                     loc=3)                       # loc=lower left corner
         rec2_ax.set_xlim(1-self.rec_steps, 0)
         rec2_ax.set_ylim(-1, 1)
-        rec2_ax.set_ylabel("Speed variance (m/s)")
+        rec2_ax.set_ylabel("Speed\nerros (m/s)")
         rec2_ax.set_xlabel("Steps (0 is current step)")
         self.rec2_handler = rec2_ax.plot([1, 2], np.zeros((2, 12)))
 
@@ -381,8 +387,8 @@ class Env():
                                          np.array([self.R-1, self.R+1])*np.sin(slot.theta))
             self.sub_slot_marker[i].set_data(np.array([self.R-1, self.R+1])*np.cos(slot.theta), 
                                          np.array([self.R-1, self.R+1])*np.sin(slot.theta))
-            self.sub_slot_text[i].set_position(((self.R+2)*np.cos(slot.theta), 
-                                            (self.R+2)*np.sin(slot.theta)))
+            self.sub_slot_text[i].set_position(((self.R+4)*np.cos(slot.theta), 
+                                            (self.R+4)*np.sin(slot.theta)))
 
         # self.slot_marker_1, self.slot_marker_2, self.slot_marker_3, self.slot_marker_4,\
         # self.slot_marker_5, self.slot_marker_6, self.slot_marker_7, self.slot_marker_8,\
@@ -410,15 +416,15 @@ class Env():
         self.sub_vehicle_dots.set_offsets(np.array([[item[0], item[1]] for item in zip(vehicles_x, vehicles_y)]))
         
 
-        adjusting_info = [("%d"%self.slots.index(veh.slot), (veh.x, veh.y)) \
-                            for group in self.adjusting_vehicles\
-                            for veh in group if veh.slot is not None]
-        for i in range(min(len(adjusting_info), 50)):
-            self.adjusting_handler[i].set_position(adjusting_info[i][1])
-            self.adjusting_handler[i].set_text(adjusting_info[i][0])
-        for i in range(min(len(adjusting_info), 50), 50):
-            self.adjusting_handler[i].set_position((self.boundary + 1, 0))
-            self.adjusting_handler[i].set_text("")
+        # adjusting_info = [("%d"%self.slots.index(veh.slot), (veh.x, veh.y)) \
+        #                     for group in self.adjusting_vehicles\
+        #                     for veh in group if veh.slot is not None]
+        # for i in range(min(len(adjusting_info), 50)):
+        #     self.adjusting_handler[i].set_position(adjusting_info[i][1])
+        #     self.adjusting_handler[i].set_text(adjusting_info[i][0])
+        # for i in range(min(len(adjusting_info), 50), 50):
+        #     self.adjusting_handler[i].set_position((self.boundary + 1, 0))
+        #     self.adjusting_handler[i].set_text("")
 
 
         # plot exiting vehicles with different markers
