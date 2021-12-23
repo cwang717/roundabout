@@ -12,12 +12,12 @@ import pickle
 class Env():
 
     def __init__(self, envParams):
-        self.slots = []
-        self.approaching_vehicles = [[], [], [], []]
-        self.adjusting_vehicles = [[], [], [], []]
-        self.platooning_vehicles = [[], [], [], []]
-        self.leaving_vehicles = [[], [], [], []]
-        self.virtual_vehicles = []
+        # self.slots = []
+        # self.approaching_vehicles = [[], [], [], []]
+        # self.adjusting_vehicles = [[], [], [], []]
+        # self.platooning_vehicles = [[], [], [], []]
+        # self.leaving_vehicles = [[], [], [], []]
+        # self.virtual_vehicles = []
 
         self.headway = envParams["headway"]
         self.veh_length = envParams["veh_length"]
@@ -34,14 +34,14 @@ class Env():
         self.approaching_steps = self.slot_length/self.v/self.step_size
         self.boundary = envParams["boundary"]
         self.idm = IDMController(self.boundary - self.stop_line)
-        self.num_step = 0
-        self.queue_length = [0, 0, 0, 0]
+        # self.num_step = 0
+        # self.queue_length = [0, 0, 0, 0]
         self.k_omega = 10
         self.k_theta = 10
-        self.records = {
-            "theta": np.zeros((1, self.numSlots)), 
-            "omega": np.zeros((1, self.numSlots))
-        }
+        # self.records = {
+        #     "theta": np.zeros((1, self.numSlots)), 
+        #     "omega": np.zeros((1, self.numSlots))
+        # }
         self.eta = envParams["eta"]
         s1 = np.array([[1, 1, 1, 1],
                [0, 1, 0, 0],
@@ -72,9 +72,31 @@ class Env():
         if self.fifo:
             self.P = np.ones(4)
         
-        self.throughput = 0
+        # self.throughput = 0
 
     def initialize(self, initParams):
+
+        self.slots = []
+        self.approaching_vehicles = [[], [], [], []]
+        self.adjusting_vehicles = [[], [], [], []]
+        self.platooning_vehicles = [[], [], [], []]
+        self.leaving_vehicles = [[], [], [], []]
+        self.virtual_vehicles = []
+        self.throughput = 0
+
+        self.num_step = 0
+        self.queue_length = [0, 0, 0, 0]
+
+        self.records = {
+            "theta": np.zeros((1, self.numSlots)), 
+            "omega": np.zeros((1, self.numSlots))
+        }
+
+        self.throughput = 0
+
+        self.new_vehicles = [0, 0, 0, 0]
+
+
         # initial slots
         for i in range(self.numSlots):
             theta = 4/3*np.pi - i/self.numSlots*np.pi*2
@@ -94,6 +116,7 @@ class Env():
         self.num_step += 1
 
         # Q->approaching queues 
+        self.new_vehicles = [0, 0, 0, 0]
         if np.mod(self.num_step, self.approaching_steps) == 0:
             for i in range(4):
                 if np.random.poisson(self.Q[i]/60*self.approaching_steps*self.step_size):
@@ -103,6 +126,7 @@ class Env():
                     des = np.random.choice(4)
                     self.approaching_vehicles[i].append(Vehicle(x, y, 0, 0))
                     self.approaching_vehicles[i][-1].generate_approach_seq(i, des)
+                    self.new_vehicles[i] = 1
 
         # move vehicles
         # vehicles in approaching_vehicles follow idm (except the first one)
